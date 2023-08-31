@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  app:
+    build: ./app
+    ports:
+      - 8000:8000
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_ADDR=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - APP_PORT=8000 
+      - NGINX_PORT=8089
+    depends_on:
+      - redis
+    container_name: my-app
+    networks:
+      - test
+
+  redis:
+    build: ./redis
+    container_name: my-redis
+    ports:
+      - 6379:6379
+    restart: always
+    
+    command: redis-server /redis.conf --requirepass ${REDIS_PASSWORD} #--tls-ca-cert-file ./redis/redis_ca.pem --tls-cert-file ./redis/redis_user.crt --tls-key-file ./redis/redis_user_private.key
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      # - REDIS_TLS_CERT_FILE=./redis/redis_user.crt
+      # - REDIS_TLS_KEY_FILE=./redis/redis_user_private.key
+      # - REDIS_TLS_CA_CERT_FILE=./redis/redis_ca.pem
+      # - REDIS_TLS_ENABLED=yes
+      - REDIS_PORT=6379
+      # - REDIS_TLS_PORT=6379
+    volumes:
+        - ./redis/redis.conf:/redis.conf
+        - ./app/source_dir:/data
+        # - ./redis/redis_ca.pem:/usr/local/etc/redis/redis_ca.pem
+        # - ./redis/redis_user.crt:/usr/local/etc/redis/redis_user.crt
+        # - ./redis/redis_user_private.key:/usr/local/etc/redis/redis_user_private.key
+    networks:
+      - test
+
+  nginx:
+    build: ./nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf 
+    ports:
+      - 8089:8089
+    restart: always
+    depends_on:
+      - app
+    container_name: my-nginx
+    networks:
+      - test
+networks:
+  test: 
+    driver: bridge
